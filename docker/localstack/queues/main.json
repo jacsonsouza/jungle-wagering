@@ -1,0 +1,9 @@
+{
+  "QueueName": "wager-transactions.fifo",
+  "Attributes": {
+    "FifoQueue": "true",
+    "ContentBasedDeduplication": "false",
+    "MessageRetentionPeriod": "1209600",
+    "RedrivePolicy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:000000000000:wager-transactions-dlq.fifo\",\"maxReceiveCount\":5}"
+  }
+}

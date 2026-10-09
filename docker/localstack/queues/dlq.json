@@ -1,0 +1,8 @@
+{
+  "QueueName": "wager-transactions-dlq.fifo",
+  "Attributes": {
+    "FifoQueue": "true",
+    "ContentBasedDeduplication": "false",
+    "MessageRetentionPeriod": "1209600"
+  }
+}
