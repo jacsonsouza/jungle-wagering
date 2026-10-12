@@ -17,7 +17,7 @@ import type { MetricLabels, MetricsPort } from '../ports/metrics.port.js';
  * which is what Prometheus asks for anyway.
  *
  * Label sets are deliberately kept to `status`, `code`, `outcome` and
- * `dependency` — all low cardinality by construction, so no walletId or
+ * `eventType` — all low cardinality by construction, so no walletId or
  * transactionId can ever inflate the registry.
  */
 export class PrometheusMetrics implements MetricsPort {
