@@ -16,6 +16,7 @@ export const FailureCode = {
   ReversalInsufficientFunds: 'REVERSAL_INSUFFICIENT_FUNDS',
   InvalidLedgerEntry: 'INVALID_LEDGER_ENTRY',
   InvalidWalletState: 'INVALID_WALLET_STATE',
+  WalletScopeMismatch: 'WALLET_SCOPE_MISMATCH',
   InvalidStateTransition: 'INVALID_STATE_TRANSITION',
   ReferenceRequired: 'REFERENCE_REQUIRED',
   ReferenceScopeMismatch: 'REFERENCE_SCOPE_MISMATCH',
@@ -28,6 +29,8 @@ export const FailureCode = {
   InvalidMessageState: 'INVALID_MESSAGE_STATE',
   MaxRetriesExceeded: 'MAX_RETRIES_EXCEEDED',
   CanonicalJsonUnsupported: 'CANONICAL_JSON_UNSUPPORTED',
+  WalletNotFound: 'WALLET_NOT_FOUND',
+  TransactionNotFound: 'TRANSACTION_NOT_FOUND',
 } as const;
 export type FailureCode = (typeof FailureCode)[keyof typeof FailureCode];
 
@@ -40,6 +43,10 @@ export const FAILURE_CATEGORY: Readonly<Record<FailureCode, FailureCategory>> =
     REVERSAL_INSUFFICIENT_FUNDS: FailureCategory.Validation,
     INVALID_LEDGER_ENTRY: FailureCategory.Validation,
     INVALID_WALLET_STATE: FailureCategory.Validation,
+    // Deliberately NOT_FOUND, not VALIDATION: a wallet that belongs to another
+    // player must look exactly like one that does not exist. Categorizing it as
+    // validation would let an attacker probe wallet ids for existence.
+    WALLET_SCOPE_MISMATCH: FailureCategory.NotFound,
     CANONICAL_JSON_UNSUPPORTED: FailureCategory.Validation,
     INVALID_STATE_TRANSITION: FailureCategory.State,
     REFERENCE_REQUIRED: FailureCategory.Validation,
@@ -52,6 +59,8 @@ export const FAILURE_CATEGORY: Readonly<Record<FailureCode, FailureCategory>> =
     REFERENCE_NOT_FOUND: FailureCategory.NotFound,
     INVALID_MESSAGE_STATE: FailureCategory.State,
     MAX_RETRIES_EXCEEDED: FailureCategory.Exhausted,
+    WALLET_NOT_FOUND: FailureCategory.NotFound,
+    TRANSACTION_NOT_FOUND: FailureCategory.NotFound,
   };
 
 export function failureCategory(code: FailureCode): FailureCategory {

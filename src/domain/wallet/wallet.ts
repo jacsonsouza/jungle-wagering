@@ -40,6 +40,7 @@ export interface WalletMovementProps {
 export class Wallet {
   private _balance: Money;
   private _version: number;
+  private _createdAt: Date;
   private _updatedAt: Date;
 
   private constructor(
@@ -48,13 +49,25 @@ export class Wallet {
     public readonly currency: CurrencyCode,
     balance: Money,
     version: number,
+    createdAt: Date,
     updatedAt: Date,
   ) {
     this._balance = balance;
     this._version = version;
+    this._createdAt = createdAt;
     this._updatedAt = updatedAt;
   }
 
+  /**
+   * The wallet is born ALREADY FUNDED, at version 1 — §9 returns `version: 1`
+   * for a wallet created with an initial balance, and §6.2 says the version
+   * increments only when the balance CHANGES after creation. Starting at zero
+   * and crediting would be the same money, but two versions and a wallet that
+   * briefly existed broke.
+   *
+   * The initial balance is still documented in the ledger by
+   * `openingEntry()`, so no cent enters the system untracked.
+   */
   static open(props: OpenWalletProps): Wallet {
     return new Wallet(
       props.id,
@@ -63,7 +76,52 @@ export class Wallet {
       props.initialBalance,
       1,
       new Date(props.openedAt.getTime()),
+      new Date(props.openedAt.getTime()),
     );
+  }
+
+  /**
+   * The ledger entry that documents where this wallet's opening balance came
+   * from (§9: an initial balance greater than zero creates an internal OPENING
+   * transaction with its CREDIT entry).
+   *
+   * It returns an entry instead of moving money on purpose: the balance was
+   * already applied by `open()`, so crediting again would double it. Building
+   * the entry here keeps the aggregate in charge of the ledger math while
+   * leaving `version` untouched — the opening is not a change.
+   *
+   * Returns null when the wallet opened at zero: there is nothing to document,
+   * and a zero-amount entry would be rejected by `WalletLedgerEntry` anyway.
+   *
+   * Fails loud if the wallet has already moved — an "opening" entry written
+   * after a bet would claim a balance the wallet no longer has.
+   */
+  openingEntry(props: {
+    readonly entryId: string;
+    readonly transactionId: string;
+    readonly at: Date;
+  }): WalletLedgerEntry | null {
+    if (this._balance.isZero()) {
+      return null;
+    }
+
+    if (this._version !== 1) {
+      throw new InvalidWalletStateError(
+        'opening entry can only be recorded on an untouched wallet',
+        { wallet: this.id, version: this._version },
+      );
+    }
+
+    return WalletLedgerEntry.create({
+      id: props.entryId,
+      walletId: this.id,
+      transactionId: props.transactionId,
+      direction: LedgerDirection.Credit,
+      money: this._balance,
+      balanceBefore: Money.zero(this.currency),
+      balanceAfter: this._balance,
+      createdAt: props.at,
+    });
   }
 
   static rehydrate(state: WalletState): Wallet {
@@ -94,6 +152,7 @@ export class Wallet {
       state.currency,
       balance,
       state.version,
+      new Date(state.createdAt.getTime()),
       new Date(state.updatedAt.getTime()),
     );
   }
@@ -108,6 +167,18 @@ export class Wallet {
 
   get updatedAt(): Date {
     return new Date(this._updatedAt.getTime());
+  }
+
+  state(): WalletState {
+    return {
+      id: this.id,
+      playerId: this.playerId,
+      currency: this.currency,
+      balance: this._balance.props(),
+      version: this._version,
+      createdAt: new Date(this._createdAt.getTime()),
+      updatedAt: new Date(this._updatedAt.getTime()),
+    };
   }
 
   debit(props: WalletMovementProps): WalletLedgerEntry {

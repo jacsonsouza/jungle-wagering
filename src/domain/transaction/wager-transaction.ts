@@ -11,6 +11,7 @@ import { payloadHash } from '../shared/payload-hash.js';
 import {
   directionFor,
   isInternalKind,
+  ReferenceRequiredError,
   requiresReferenceFor,
 } from './transaction-rules.js';
 import { canTransition, isTerminal } from './transaction-table.js';
@@ -45,12 +46,22 @@ export interface WagerTransactionState extends Omit<
   readonly failureCode?: FailureCode;
   /** Timestamp of the last state transition (including PENDING_REFERENCE). */
   readonly processedAt?: Date;
+  /**
+   * Balance the wallet showed when this transaction was answered (§7.7). Null
+   * only while the transaction is still PENDING.
+   */
+  readonly resultBalance?: MoneyProps;
   readonly createdAt: Date;
 }
 
 /**
  * Business fields that go into the payloadHash (§9). The Idempotency-Key
  * header and transport metadata are deliberately excluded.
+ *
+ * `referenceExternalTransactionId` IS included, unlike what a first reading
+ * might suggest: it is a business field of the payload, and leaving it out
+ * would let the same Idempotency-Key point at two different references while
+ * hashing identically — a silent replay where §9 demands a conflict.
  */
 export const BUSINESS_PAYLOAD_FIELDS = [
   'providerId',
@@ -61,14 +72,21 @@ export const BUSINESS_PAYLOAD_FIELDS = [
   'gameId',
   'kind',
   'money',
+  'referenceExternalTransactionId',
 ] as const;
 
 class InvalidTransactionStateError extends DomainError {
   readonly code = FailureCode.InvalidStateTransition;
 }
 
-class ReferenceRequiredError extends DomainError {
-  readonly code = FailureCode.ReferenceRequired;
+/**
+ * §9: the same Idempotency-Key arriving with a divergent payload is a CONFLICT,
+ * never a replay. Answering with the stored result would hand the provider an
+ * answer to a question it did not ask — and worse, would let two different
+ * operations share one audit trail.
+ */
+export class PayloadMismatchError extends DomainError {
+  readonly code = FailureCode.PayloadMismatch;
 }
 
 export class WagerTransaction {
@@ -76,6 +94,7 @@ export class WagerTransaction {
   private _referenceTransactionId?: string;
   private _failureCode?: FailureCode;
   private _processedAt?: Date;
+  private _resultBalance?: Money;
 
   private constructor(
     public readonly id: string,
@@ -95,11 +114,13 @@ export class WagerTransaction {
     referenceTransactionId?: string,
     failureCode?: FailureCode,
     processedAt?: Date,
+    resultBalance?: Money,
   ) {
     this._status = status;
     this._referenceTransactionId = referenceTransactionId;
     this._failureCode = failureCode;
     this._processedAt = processedAt;
+    this._resultBalance = resultBalance;
   }
 
   /** Born in PENDING; signs the payload at creation time. */
@@ -130,7 +151,7 @@ export class WagerTransaction {
       props.providerId,
       props.externalTransactionId,
       props.idempotencyKey,
-      payloadHash(businessSubset(props)),
+      wagerTransactionPayloadHash(props),
       props.walletId,
       props.playerId,
       props.roundId,
@@ -146,8 +167,31 @@ export class WagerTransaction {
   /**
    * Rehydration does NOT recompute the payloadHash: it is the contract signed
    * at creation time — recomputing it would hide data corruption.
+   *
+   * It DOES validate the enums, for the same reason `Wallet.rehydrate`
+   * validates the version: the mapper casts varchar columns to enum types, and
+   * that cast is only honest if persisted garbage throws here instead of
+   * surfacing later as a `TypeError` from the transition table.
    */
   static rehydrate(state: WagerTransactionState): WagerTransaction {
+    assertPersistedEnum(
+      state.kind,
+      WagerTransactionKind,
+      'persisted kind is not a known transaction kind',
+    );
+    assertPersistedEnum(
+      state.status,
+      WagerTransactionStatus,
+      'persisted status is not a known transaction status',
+    );
+    if (state.failureCode !== undefined) {
+      assertPersistedEnum(
+        state.failureCode,
+        FailureCode,
+        'persisted failureCode is not a known failure code',
+      );
+    }
+
     return new WagerTransaction(
       state.id,
       state.providerId,
@@ -166,6 +210,7 @@ export class WagerTransaction {
       state.referenceTransactionId,
       state.failureCode,
       state.processedAt ? new Date(state.processedAt.getTime()) : undefined,
+      state.resultBalance ? Money.rehydrate(state.resultBalance) : undefined,
     );
   }
 
@@ -186,6 +231,36 @@ export class WagerTransaction {
     return this._processedAt
       ? new Date(this._processedAt.getTime())
       : undefined;
+  }
+
+  /**
+   * The balance this transaction's owner saw when it was answered — what a
+   * replay has to return (§7.7). Undefined while the transaction is still
+   * PENDING: nobody has seen a balance yet.
+   */
+  get resultBalance(): Money | undefined {
+    return this._resultBalance
+      ? Money.rehydrate(this._resultBalance.props())
+      : undefined;
+  }
+
+  /**
+   * Records the balance observed at answer time. Separate from the transition
+   * methods because the transaction cannot compute it: the wallet owns the
+   * balance, and only the use case holding both can read it.
+   *
+   * Fails loud if called on a PENDING transaction — a balance for a question
+   * that was never answered would be a lie a replay would repeat.
+   */
+  recordResultBalance(balance: Money): void {
+    if (this._status === WagerTransactionStatus.Pending) {
+      throw new InvalidTransactionStateError(
+        'result balance can only be recorded once the transaction is answered',
+        { status: this._status },
+      );
+    }
+
+    this._resultBalance = balance;
   }
 
   // ---- transitions (forbidden pairs throw InvalidTransactionStateError) ----
@@ -217,6 +292,33 @@ export class WagerTransaction {
 
   isTerminal(): boolean {
     return isTerminal(this._status);
+  }
+
+  /**
+   * The inverse of `rehydrate` — same contract `Wallet` offers. Handy for
+   * round-tripping an aggregate through persistence in one expression.
+   */
+  state(): WagerTransactionState {
+    return {
+      id: this.id,
+      providerId: this.providerId,
+      externalTransactionId: this.externalTransactionId,
+      idempotencyKey: this.idempotencyKey,
+      payloadHash: this.payloadHash,
+      walletId: this.walletId,
+      playerId: this.playerId,
+      roundId: this.roundId,
+      gameId: this.gameId,
+      kind: this.kind,
+      money: this.money.props(),
+      referenceExternalTransactionId: this.referenceExternalTransactionId,
+      status: this._status,
+      referenceTransactionId: this._referenceTransactionId,
+      failureCode: this._failureCode,
+      processedAt: this.processedAt,
+      resultBalance: this._resultBalance?.props(),
+      createdAt: new Date(this.createdAt.getTime()),
+    };
   }
 
   affectsBalance(): boolean {
@@ -260,15 +362,70 @@ function requiresKindBalance(kind: WagerTransactionKind): boolean {
   return kind !== WagerTransactionKind.Loss;
 }
 
-/** Derived from BUSINESS_PAYLOAD_FIELDS: change the list and the hash follows. */
+/**
+ * Guards a cast from a persisted varchar to a domain enum. The tables use
+ * varchar + CHECK rather than native enums (they survive migrations and seed
+ * scripts untouched), so the application is the second line of defense.
+ */
+function assertPersistedEnum<T extends string>(
+  value: string,
+  allowed: Readonly<Record<string, T>>,
+  message: string,
+): asserts value is T {
+  // Values, not keys: these const objects map PascalCase keys to SCREAMING
+  // values, and the database stores the values.
+  if (!(Object.values(allowed) as readonly string[]).includes(value)) {
+    throw new InvalidTransactionStateError(message, { value });
+  }
+}
+
+/**
+ * The public hash contract (§9). `create` uses it to sign the payload, and
+ * `SubmitTransactionUseCase` uses the very same function to compare an
+ * incoming payload against a stored one — two implementations here would be
+ * two definitions of "identical", which is exactly the bug idempotency exists
+ * to prevent.
+ *
+ * `id`, `idempotencyKey` and `createdAt` are excluded on purpose: they are
+ * transport/identity concerns, not business fields.
+ */
+export function wagerTransactionPayloadHash(
+  props: Pick<
+    CreateWagerTransactionProps,
+    | 'providerId'
+    | 'externalTransactionId'
+    | 'playerId'
+    | 'walletId'
+    | 'roundId'
+    | 'gameId'
+    | 'kind'
+    | 'money'
+    | 'referenceExternalTransactionId'
+  >,
+): string {
+  return payloadHash(businessSubset(props));
+}
+
+/**
+ * Derived from BUSINESS_PAYLOAD_FIELDS: change the list and the hash follows.
+ *
+ * `undefined` fields are OMITTED, not serialized: a BET has no reference, and
+ * `"referenceExternalTransactionId": undefined` is not canonicalizable. The
+ * distinction still survives — a REFUND pointing at "a" and one pointing at
+ * "b" produce different subsets and therefore different hashes.
+ */
 function businessSubset(
-  props: CreateWagerTransactionProps,
+  props: Pick<CreateWagerTransactionProps, 'money'> &
+    Record<string, unknown>,
 ): Record<string, unknown> {
-  const source = props as unknown as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
 
   for (const field of BUSINESS_PAYLOAD_FIELDS) {
-    subset[field] = field === 'money' ? props.money.props() : source[field];
+    const value = field === 'money' ? props.money.props() : props[field];
+
+    if (value !== undefined) {
+      subset[field] = value;
+    }
   }
 
   return subset;
