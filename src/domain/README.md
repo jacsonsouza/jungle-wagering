@@ -114,7 +114,7 @@ completeness test in `failure-code.spec.ts`). Domain errors extend
    duplicate a business rule.
 2. **`ROLLBACK` inverts the reference's direction** (§7 "inverse of the
    reference"): ROLLBACK of `BET` → `CREDIT`; of `WIN`/`REFUND` → `DEBIT`.
-   No resolved reference → `REFERENCE_REQUIRED` (we never guess).
+   No resolved reference → `REFERENCE_REQUIRED` (the rule never guesses).
 3. **SHA-256 inside the domain** (`node:crypto`): a pure, deterministic
    function, no DI. Swappable later behind `shared/payload-hash.ts`.
 4. **Enums as const object + union** instead of TS `enum`
@@ -128,3 +128,25 @@ completeness test in `failure-code.spec.ts`). Domain errors extend
 7. **Reversing twice** (§7.4) is not a code rule: it will be a **partial unique
    index** in the schema (Phase 2). `ALREADY_REVERSED` exists in the taxonomy
    to signal a violation.
+8. **A wallet is born funded, at `version: 1`** (§9 returns `version: 1` for a
+   wallet created with an initial balance; §6.2 says the version moves only
+   when the balance changes afterwards). Starting at zero and crediting would
+   be the same money but two versions, and a wallet that briefly existed broke.
+   `Wallet.openingEntry()` documents that opening balance in the ledger without
+   touching the wallet: the aggregate owns the ledger math, the version stays
+   put. Returns `null` at a zero balance — nothing moved, nothing to record.
+9. **`resultBalance`** — the balance a transaction's owner saw when it was
+   answered (§7.7). It cannot be reconstructed from the ledger: `LOSS` and
+   `REJECTED` produce no entry, and for everything else the ledger row would
+   cost an extra join on the hottest path in the system. The use case records
+   it (`recordResultBalance`) because the transaction cannot compute it — the
+   wallet owns the balance. Fails loud on a `PENDING` transaction: a balance
+   for a question never answered is a lie a replay would repeat.
+10. **`WALLET_SCOPE_MISMATCH` is categorized `NOT_FOUND`, not `VALIDATION`** —
+    a wallet belonging to another player must look exactly like one that does
+    not exist, or an attacker can probe wallet ids for existence.
+11. **Rehydration validates `kind`/`status`/`failureCode`** even though the
+    tables use `varchar` + `CHECK`, for the same reason `Wallet.rehydrate`
+    validates the version: the mapper casts columns to enum types, and that
+    cast is only honest if persisted garbage throws at the boundary instead of
+    surfacing later as a `TypeError` from the transition table.

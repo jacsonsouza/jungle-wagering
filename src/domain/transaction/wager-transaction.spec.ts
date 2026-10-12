@@ -1,3 +1,4 @@
+import { FailureCode } from '../failures/failure-code.js';
 import {
   LedgerDirection,
   WagerTransactionKind,
@@ -6,7 +7,10 @@ import {
 import { payloadHash } from '../shared/payload-hash.js';
 import { AT, LATER, money, wagerTransaction } from '../testing/factories.js';
 import { ALLOWED_TRANSITIONS, canTransition } from './transaction-table.js';
-import { WagerTransaction } from './wager-transaction.js';
+import {
+  WagerTransaction,
+  wagerTransactionPayloadHash,
+} from './wager-transaction.js';
 
 const ALL = Object.values(WagerTransactionStatus);
 
@@ -111,6 +115,51 @@ describe('WagerTransaction payload hashing', () => {
     expect(
       transaction.matchesPayload(payloadHash({ providerId: 'provider-a' })),
     ).toBe(false);
+  });
+
+  it('includes the reference, so one key cannot point at two references', () => {
+    const base = {
+      providerId: 'provider-a',
+      externalTransactionId: 'ext-refund-1',
+      playerId: 'player-1',
+      walletId: 'wallet-1',
+      roundId: 'round-1',
+      gameId: 'fortune-chimp',
+      kind: WagerTransactionKind.Refund,
+      money: money('25.00'),
+    };
+
+    const againstA = WagerTransaction.create({
+      ...base,
+      id: 'tx-1',
+      idempotencyKey: 'provider-a:ext-refund-1',
+      referenceExternalTransactionId: 'ext-bet-1',
+      createdAt: AT,
+    });
+    const againstB = wagerTransactionPayloadHash({
+      ...base,
+      referenceExternalTransactionId: 'ext-bet-2',
+    });
+
+    // §9: same key with a divergent payload is a CONFLICT, never a replay.
+    expect(againstA.matchesPayload(againstB)).toBe(false);
+  });
+
+  it('omits an absent reference instead of failing on undefined', () => {
+    // canonicalJson rejects `undefined` properties, so a BET must simply not
+    // carry the key — and the hash must still be computable.
+    const bet = wagerTransactionPayloadHash({
+      providerId: 'provider-a',
+      externalTransactionId: 'ext-1',
+      playerId: 'player-1',
+      walletId: 'wallet-1',
+      roundId: 'round-1',
+      gameId: 'fortune-chimp',
+      kind: WagerTransactionKind.Bet,
+      money: money('25.00'),
+    });
+
+    expect(bet).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('rehydrate keeps the signed hash instead of recomputing it', () => {
@@ -227,6 +276,71 @@ describe('WagerTransaction transitions', () => {
         'transaction status cannot move to the target status',
       );
     }
+  });
+});
+
+describe('WagerTransaction result balance (§7.7)', () => {
+  it('has none while still pending', () => {
+    expect(wagerTransaction().resultBalance).toBeUndefined();
+  });
+
+  it('keeps the observed balance through a rehydrate round trip', () => {
+    const transaction = wagerTransaction();
+    transaction.markProcessed(undefined, LATER);
+    transaction.recordResultBalance(money('975.00'));
+
+    // A replay answers with the ORIGINAL balance, not today's (§7.7) — so the
+    // snapshot has to survive the persistence round trip untouched.
+    const revived = WagerTransaction.rehydrate(transaction.state());
+
+    expect(revived.resultBalance?.toString()).toBe('975.00');
+    expect(revived.resultBalance?.currency).toBe('BRL');
+  });
+
+  it('fails loud when recorded before the transaction is answered', () => {
+    const transaction = wagerTransaction();
+
+    expect(() => transaction.recordResultBalance(money('1.00'))).toThrow(
+      'result balance can only be recorded once the transaction is answered',
+    );
+    expect(transaction.resultBalance).toBeUndefined();
+  });
+
+  it('can be recorded on a rejected transaction — no ledger entry exists to read', () => {
+    const transaction = wagerTransaction();
+    transaction.reject(FailureCode.InsufficientFunds, LATER);
+    transaction.recordResultBalance(money('50.00'));
+
+    expect(transaction.resultBalance?.toString()).toBe('50.00');
+  });
+});
+
+describe('WagerTransaction rehydration guards', () => {
+  it('rejects a persisted kind that is not a known kind', () => {
+    expect(() =>
+      WagerTransaction.rehydrate({
+        ...wagerTransaction().state(),
+        kind: 'DEPOSIT' as WagerTransactionKind,
+      }),
+    ).toThrow('persisted kind is not a known transaction kind');
+  });
+
+  it('rejects a persisted status that is not a known status', () => {
+    expect(() =>
+      WagerTransaction.rehydrate({
+        ...wagerTransaction().state(),
+        status: 'MAYBE' as WagerTransactionStatus,
+      }),
+    ).toThrow('persisted status is not a known transaction status');
+  });
+
+  it('rejects a persisted failure code that is not a known code', () => {
+    expect(() =>
+      WagerTransaction.rehydrate({
+        ...wagerTransaction().state(),
+        failureCode: 'NOPE' as FailureCode,
+      }),
+    ).toThrow('persisted failureCode is not a known failure code');
   });
 });
 

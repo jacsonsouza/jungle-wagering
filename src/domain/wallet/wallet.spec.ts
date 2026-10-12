@@ -24,6 +24,55 @@ describe('Wallet.open', () => {
   });
 });
 
+describe('Wallet.openingEntry', () => {
+  it('documents the opening balance as a credit from zero', () => {
+    const wallet = openWallet({ initialBalance: '100.00' });
+
+    const entry = wallet.openingEntry({
+      entryId: 'entry-1',
+      transactionId: 'tx-opening',
+      at: AT,
+    });
+
+    expect(entry).not.toBeNull();
+    expect(entry?.props()).toMatchObject({
+      id: 'entry-1',
+      transactionId: 'tx-opening',
+      direction: LedgerDirection.Credit,
+    });
+    expect(entry?.props().balanceBefore.toString()).toBe('0.00');
+    expect(entry?.props().balanceAfter.toString()).toBe('100.00');
+    expect(entry?.isBalanced()).toBe(true);
+
+    // The wallet was already funded by `open`, so documenting it must not
+    // fund it a second time, nor bump a version the spec pins at 1 (§9).
+    expect(wallet.balance.toString()).toBe('100.00');
+    expect(wallet.version).toBe(1);
+  });
+
+  it('returns null for a wallet opened at zero', () => {
+    const wallet = openWallet({ initialBalance: '0.00' });
+
+    expect(
+      wallet.openingEntry({ entryId: 'e', transactionId: 't', at: AT }),
+    ).toBeNull();
+  });
+
+  it('fails loud once the wallet has moved', () => {
+    const wallet = openWallet({ initialBalance: '100.00' });
+    wallet.credit({
+      entryId: 'entry-1',
+      transactionId: 'tx-1',
+      money: money('10.00'),
+      at: LATER,
+    });
+
+    expect(() =>
+      wallet.openingEntry({ entryId: 'e', transactionId: 't', at: AT }),
+    ).toThrow('opening entry can only be recorded on an untouched wallet');
+  });
+});
+
 describe('Wallet movements', () => {
   it('credits and returns a balanced ledger entry', () => {
     const wallet = openWallet({ initialBalance: '100.00' });

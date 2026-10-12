@@ -50,7 +50,13 @@ export function isInternalKind(kind: WagerTransactionKind): boolean {
   return kind === WagerTransactionKind.Opening;
 }
 
-class ReferenceRequiredError extends DomainError {
+/**
+ * §7 rule 1: REFUND and ROLLBACK must carry `referenceExternalTransactionId`.
+ * Exported because it is also the payload-shape answer a submission gets when
+ * the field is missing — one definition of "required", used by the rule that
+ * computes a direction, by `WagerTransaction.create` and by the use case.
+ */
+export class ReferenceRequiredError extends DomainError {
   readonly code = FailureCode.ReferenceRequired;
 }
 

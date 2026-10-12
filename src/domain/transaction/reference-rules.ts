@@ -23,6 +23,18 @@ class ReferenceNotProcessableError extends DomainError {
   readonly code = FailureCode.ReferenceNotProcessable;
 }
 
+/**
+ * §7.4: a reference may be reversed at most once.
+ *
+ * The database is the real arbiter — the partial unique index
+ * `uq_wager_tx_single_reversal` makes a second reversal impossible even when
+ * two requests race past this check. This pre-check only turns the common case
+ * into a clean 409 instead of a 23505.
+ */
+export class AlreadyReversedError extends DomainError {
+  readonly code = FailureCode.AlreadyReversed;
+}
+
 export function assertReferenceIsValid(args: {
   readonly incoming: ReferenceScope & {
     kind: WagerTransactionKind;
