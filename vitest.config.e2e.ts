@@ -12,5 +12,6 @@ export default defineConfig({
     // Real PostgreSQL: the stack must be up (`bun run infra:up`).
     env: testEnv(),
     globalSetup: ['./test/setup/global-setup.ts'],
+    fileParallelism: false,
   },
 });
