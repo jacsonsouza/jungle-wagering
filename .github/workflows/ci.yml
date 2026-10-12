@@ -1,0 +1,108 @@
+# Continuous integration.
+#
+# Two jobs on purpose:
+#
+#   * quality      — static analysis and the pure domain tests. No
+#                    infrastructure, so it fails fast.
+#   * integration  — the suites that talk to PostgreSQL and SQS.
+#
+# Infrastructure is brought up with the same `bun run infra:up` a developer
+# runs locally. Going through Compose instead of runner service containers
+# matters: the init scripts under `docker/` create the dedicated test database
+# and the FIFO queues, and service containers cannot mount those volumes.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same ref supersedes runs that have not finished yet.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Nothing in CI writes to the repository.
+permissions:
+  contents: read
+
+# Single source of truth for both jobs.
+#
+# `testEnv()` re-points `DATABASE_URL` at `TEST_DATABASE_URL` inside the test
+# workers, which is why the two URLs must stay different: the suites are
+# expected to migrate and truncate freely.
+env:
+  NODE_ENV: test
+  PORT: 3000
+
+  POSTGRES_DB: jungle_wagering
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jungle_wagering
+  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/jungle_wagering_test
+
+jobs:
+  quality:
+    name: Typecheck, lint and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Run unit tests
+        run: bun run test
+
+  integration:
+    name: Integration, end-to-end and concurrency tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Compose waits for both healthchecks, and its init scripts create the
+      # `${POSTGRES_DB}_test` database and the FIFO queues the concurrency
+      # suite relies on.
+      - name: Start PostgreSQL and LocalStack
+        run: bun run infra:up
+
+      - name: Run integration tests
+        run: bun run test:int
+
+      - name: Run end-to-end tests
+        run: bun run test:e2e
+
+      - name: Run concurrency tests
+        run: bun run test:conc
+
+      # Before teardown, while the containers are still readable.
+      - name: Show infrastructure logs
+        if: failure()
+        run: docker compose logs --tail 200
+
+      - name: Stop infrastructure
+        if: always()
+        run: bun run infra:down
