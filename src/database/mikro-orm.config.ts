@@ -10,13 +10,6 @@ export default defineConfig({
   entities: ['./dist/entities'],
   entitiesTs: ['./src/entities'],
   metadataProvider: ReflectMetadataProvider,
-  // TODO(phase-2): remove this once `src/entities/` holds real entities.
-  // The scaffold boots before the domain layer exists, and MikroORM refuses
-  // to start when a glob resolves to zero entities. Re-enabling it is what
-  // makes a broken entity path fail loudly instead of silently.
-  discovery: {
-    warnWhenNoEntities: false,
-  },
   extensions: [Migrator],
   migrations: {
     path: './dist/migrations',
