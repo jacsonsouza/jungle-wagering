@@ -34,7 +34,11 @@ export interface MessageQueuePort {
   send(queueUrl: string, message: OutgoingMessage): Promise<void>;
   receive(
     queueUrl: string,
-    options: { readonly maxMessages: number; readonly waitTimeSeconds: number; readonly visibilityTimeoutSeconds: number },
+    options: {
+      readonly maxMessages: number;
+      readonly waitTimeSeconds: number;
+      readonly visibilityTimeoutSeconds: number;
+    },
   ): Promise<readonly ReceivedMessage[]>;
   /** Delete only AFTER the database commit — never before (§10). */
   delete(queueUrl: string, receiptHandle: string): Promise<void>;
@@ -47,5 +51,9 @@ export interface MessageQueuePort {
    */
   release(queueUrl: string, receiptHandle: string): Promise<void>;
   /** Move a poison message to the DLQ and clear it from the main queue. */
-  sendToDeadLetter(queueUrl: string, dlqUrl: string, message: ReceivedMessage): Promise<void>;
+  sendToDeadLetter(
+    queueUrl: string,
+    dlqUrl: string,
+    message: ReceivedMessage,
+  ): Promise<void>;
 }

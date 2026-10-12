@@ -271,7 +271,9 @@ async function withTimeout(
  * the outbox or the inbox shows up as duplicated effects, and duplicated
  * effects show up here first.
  */
-export async function assertWalletMatchesLedger(walletId: string): Promise<void> {
+export async function assertWalletMatchesLedger(
+  walletId: string,
+): Promise<void> {
   const [wallet] = await db<{ balance: string }>(
     `select balance::text as balance from "wallets" where id = '${walletId}'`,
   );
@@ -298,9 +300,7 @@ export async function assertWalletMatchesLedger(walletId: string): Promise<void>
 }
 
 /** How many times a given transaction is recorded in the ledger. */
-export async function ledgerRowsFor(
-  transactionId: string,
-): Promise<number> {
+export async function ledgerRowsFor(transactionId: string): Promise<number> {
   const rows = await db<{ count: string }>(
     `select count(*)::text as count from "wallet_ledger_entries"
       where transaction_id = '${transactionId}'`,

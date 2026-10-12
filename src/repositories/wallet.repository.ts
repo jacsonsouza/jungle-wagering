@@ -14,7 +14,7 @@ import { WalletLedgerEntryMapper } from '../mappers/wallet-ledger-entry.mapper.j
 
 export class MikroOrmWalletRepository implements WalletRepositoryPort {
   async findById(tx: EntityManager, walletId: string): Promise<Wallet | null> {
-    const entity = await tx.findOne(WalletEntity, { id: walletId })
+    const entity = await tx.findOne(WalletEntity, { id: walletId });
 
     return entity ? WalletMapper.toDomain(entity) : null;
   }
@@ -108,8 +108,12 @@ export class MikroOrmWalletRepository implements WalletRepositoryPort {
 
   async sumEntries(
     tx: EntityManager,
-    walletId: string
-  ): Promise<{ readonly creditTotal: string; readonly debitTotal: string; readonly entryCount: number; }> {
+    walletId: string,
+  ): Promise<{
+    readonly creditTotal: string;
+    readonly debitTotal: string;
+    readonly entryCount: number;
+  }> {
     const [row] = await tx.getConnection().execute<{
       credit_total: string;
       debit_total: string;

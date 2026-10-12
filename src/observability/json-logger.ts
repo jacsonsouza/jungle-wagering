@@ -1,9 +1,14 @@
-import { LogFields, LoggerPort } from "../ports/logger.port.js";
-import { correlationId } from "./correlation-context.js";
+import { LogFields, LoggerPort } from '../ports/logger.port.js';
+import { correlationId } from './correlation-context.js';
 
 type Level = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
-const LEVEL_ORDER: Record<Level, number> = { DEBUG: 10, INFO: 20, WARN: 30, ERROR: 40 };
+const LEVEL_ORDER: Record<Level, number> = {
+  DEBUG: 10,
+  INFO: 20,
+  WARN: 30,
+  ERROR: 40,
+};
 
 export class JsonLogger implements LoggerPort {
   constructor(
@@ -12,9 +17,15 @@ export class JsonLogger implements LoggerPort {
     private readonly sink: (line: string) => void = console.log,
   ) {}
 
-  debug(message: string, fields?: LogFields): void { this.write('DEBUG', message, fields); }
-  info(message: string, fields?: LogFields): void { this.write('INFO', message, fields); }
-  warn(message: string, fields?: LogFields): void { this.write('WARN', message, fields); }
+  debug(message: string, fields?: LogFields): void {
+    this.write('DEBUG', message, fields);
+  }
+  info(message: string, fields?: LogFields): void {
+    this.write('INFO', message, fields);
+  }
+  warn(message: string, fields?: LogFields): void {
+    this.write('WARN', message, fields);
+  }
 
   error(message: string, fields?: LogFields, error?: unknown): void {
     this.write('ERROR', message, {

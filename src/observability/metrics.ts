@@ -1,4 +1,9 @@
-import { collectDefaultMetrics, Counter, Histogram, Registry } from 'prom-client';
+import {
+  collectDefaultMetrics,
+  Counter,
+  Histogram,
+  Registry,
+} from 'prom-client';
 import type { MetricLabels, MetricsPort } from '../ports/metrics.port.js';
 
 /**

@@ -10,7 +10,10 @@ import { isLockConflict } from '../observability/lock-conflict.js';
 import { secondsBetween, type ClockPort } from '../ports/clock.port.js';
 import type { InboxRepositoryPort } from '../ports/inbox-repository.port.js';
 import type { LoggerPort } from '../ports/logger.port.js';
-import type { MessageQueuePort, ReceivedMessage } from '../ports/message-queue.port.js';
+import type {
+  MessageQueuePort,
+  ReceivedMessage,
+} from '../ports/message-queue.port.js';
 import type { MetricsPort } from '../ports/metrics.port.js';
 import type { UnitOfWorkPort } from '../ports/unit-of-work.port.js';
 import type {
@@ -311,7 +314,10 @@ export class TransactionConsumer {
 
       const money = d.money as { amount?: unknown; currency?: unknown };
 
-      if (typeof money.amount !== 'string' || typeof money.currency !== 'string') {
+      if (
+        typeof money.amount !== 'string' ||
+        typeof money.currency !== 'string'
+      ) {
         return null;
       }
 
@@ -319,7 +325,9 @@ export class TransactionConsumer {
       // but only after the use case had already opened a transaction. An
       // unknown currency is a malformed payload, and malformed payloads go to
       // the DLQ — they never become readable by retrying.
-      if (!Object.values(CurrencyCode).includes(money.currency as CurrencyCode)) {
+      if (
+        !Object.values(CurrencyCode).includes(money.currency as CurrencyCode)
+      ) {
         return null;
       }
 

@@ -18,7 +18,9 @@ async function bootstrap(): Promise<void> {
     const inbound = req.headers['x-correlation-id'];
 
     const id =
-      typeof inbound === 'string' && inbound.length > 0 ? inbound : randomUUID();
+      typeof inbound === 'string' && inbound.length > 0
+        ? inbound
+        : randomUUID();
 
     res.setHeader('x-correlation-id', id);
 

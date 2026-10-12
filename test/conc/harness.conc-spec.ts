@@ -1,11 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { runWorker, runWorkers } from './harness.js';
-import {
-  closeTestOrm,
-  db,
-  testOrm,
-  truncateAllTables,
-} from '../setup/orm.js';
+import { closeTestOrm, db, testOrm, truncateAllTables } from '../setup/orm.js';
 
 /**
  * Smoke test for the process harness itself.

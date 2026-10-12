@@ -54,13 +54,20 @@ class FakeWalletRepo implements WalletRepositoryPort {
     debitTotal: string;
     entryCount: number;
   }> {
-    return { creditTotal: '0', debitTotal: '0', entryCount: this.entries.length };
+    return {
+      creditTotal: '0',
+      debitTotal: '0',
+      entryCount: this.entries.length,
+    };
   }
   async insert(_tx: EntityManager, wallet: Wallet): Promise<void> {
     this.stored.push(wallet);
   }
   async update(): Promise<void> {}
-  async insertEntry(_tx: EntityManager, entry: WalletLedgerEntry): Promise<void> {
+  async insertEntry(
+    _tx: EntityManager,
+    entry: WalletLedgerEntry,
+  ): Promise<void> {
     this.entries.push(entry);
   }
 }
@@ -87,9 +94,7 @@ class NoopTxRepo implements WagerTransactionRepositoryPort {
   async findReversalForReference(): Promise<WagerTransaction | null> {
     return null;
   }
-  async findDueForPendingReference(): Promise<
-    readonly PendingReferenceDue[]
-  > {
+  async findDueForPendingReference(): Promise<readonly PendingReferenceDue[]> {
     return [];
   }
   async clearPendingSchedule(): Promise<void> {}

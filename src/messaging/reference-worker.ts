@@ -61,7 +61,10 @@ export class ReferenceWorker {
     private readonly ids: IdGeneratorPort,
     private readonly logger: LoggerPort,
     private readonly metrics: MetricsPort,
-    private readonly options: { readonly batchSize?: number; readonly idlePollMs?: number } = {},
+    private readonly options: {
+      readonly batchSize?: number;
+      readonly idlePollMs?: number;
+    } = {},
   ) {}
 
   start(): void {
@@ -165,9 +168,7 @@ export class ReferenceWorker {
           em,
           transaction.id,
           nextAttempt,
-          new Date(
-            this.clock.now().getTime() + computeBackoff(nextAttempt),
-          ),
+          new Date(this.clock.now().getTime() + computeBackoff(nextAttempt)),
         ),
       );
 
@@ -192,10 +193,7 @@ export class ReferenceWorker {
    * payload, so the retry is exactly the operation that was accepted — a
    * provider cannot smuggle a different amount in on the second attempt.
    */
-  private async resolve(
-    em: EntityManager,
-    transaction: WagerTransaction,
-  ) {
+  private async resolve(em: EntityManager, transaction: WagerTransaction) {
     const state = transaction.state();
 
     return this.submit.executeIn(em, {

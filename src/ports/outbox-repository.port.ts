@@ -24,15 +24,15 @@ export interface OutboxRepositoryPort {
    */
   claimDue(
     em: EntityManager,
-    options: { readonly limit: number; readonly now: Date; readonly leaseMs: number },
+    options: {
+      readonly limit: number;
+      readonly now: Date;
+      readonly leaseMs: number;
+    },
   ): Promise<readonly OutboxMessage[]>;
 
   /** Marks a claimed row published. Idempotent: a second call changes nothing. */
-  markPublished(
-    em: EntityManager,
-    id: string,
-    at: Date,
-  ): Promise<void>;
+  markPublished(em: EntityManager, id: string, at: Date): Promise<void>;
 
   /**
    * Reschedules a failed publish with exponential backoff, or gives up when

@@ -91,7 +91,11 @@ export class SqsMessageQueue implements MessageQueuePort {
       // SQS promises all three; TypeScript cannot. A message missing any of
       // them cannot be acked (no handle) nor parsed (no body), so dropping it
       // here is the only honest option — and it surfaces as a redelivery.
-      if (MessageId === undefined || ReceiptHandle === undefined || Body === undefined) {
+      if (
+        MessageId === undefined ||
+        ReceiptHandle === undefined ||
+        Body === undefined
+      ) {
         continue;
       }
 

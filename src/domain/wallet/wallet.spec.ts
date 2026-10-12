@@ -53,8 +53,9 @@ describe('Wallet.openingEntry', () => {
   it('returns null for a wallet opened at zero', () => {
     const wallet = openWallet({ initialBalance: '0.00' });
 
-    expect(wallet.openingEntry({ entryId: 'e', transactionId: 't', at: AT }))
-      .toBeNull();
+    expect(
+      wallet.openingEntry({ entryId: 'e', transactionId: 't', at: AT }),
+    ).toBeNull();
   });
 
   it('fails loud once the wallet has moved', () => {

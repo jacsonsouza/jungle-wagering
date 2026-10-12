@@ -360,7 +360,14 @@ export class SubmitTransactionUseCase {
         throw error;
       }
 
-      return this.persistRejection(tx, transaction, wallet, error, now, rowExists);
+      return this.persistRejection(
+        tx,
+        transaction,
+        wallet,
+        error,
+        now,
+        rowExists,
+      );
     }
 
     // No DomainError is converted from here on: failing to build an event or

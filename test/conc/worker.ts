@@ -4,10 +4,7 @@ import { CurrencyCode } from '../../src/domain/index.js';
 import { env } from '../../src/config/env.js';
 import { SystemClock } from '../../src/ports/clock.port.js';
 import type { IdGeneratorPort } from '../../src/ports/id-generator.port.js';
-import {
-  quietLogger,
-  recordingMetrics,
-} from '../setup/observability.js';
+import { quietLogger, recordingMetrics } from '../setup/observability.js';
 import type {
   MessageQueuePort,
   OutgoingMessage,
@@ -138,12 +135,17 @@ function queueThatNeverAcks(inner: MessageQueuePort): MessageQueuePort {
   return {
     send: (queueUrl: string, message: OutgoingMessage) =>
       inner.send(queueUrl, message),
-    receive: (queueUrl: string, options: Parameters<MessageQueuePort['receive']>[1]) =>
-      inner.receive(queueUrl, options),
+    receive: (
+      queueUrl: string,
+      options: Parameters<MessageQueuePort['receive']>[1],
+    ) => inner.receive(queueUrl, options),
     release: (queueUrl: string, receiptHandle: string) =>
       inner.release(queueUrl, receiptHandle),
-    sendToDeadLetter: (queueUrl: string, dlqUrl: string, message: ReceivedMessage) =>
-      inner.sendToDeadLetter(queueUrl, dlqUrl, message),
+    sendToDeadLetter: (
+      queueUrl: string,
+      dlqUrl: string,
+      message: ReceivedMessage,
+    ) => inner.sendToDeadLetter(queueUrl, dlqUrl, message),
     delete: () => Promise.resolve(),
   };
 }
@@ -161,9 +163,8 @@ async function buildContext(
   consumerAcks: boolean,
   visibilityTimeoutSeconds?: number,
 ): Promise<Context> {
-  const { default: config } = await import(
-    '../../src/database/mikro-orm.config.js'
-  );
+  const { default: config } =
+    await import('../../src/database/mikro-orm.config.js');
   const orm = await MikroORM.init({
     ...config,
     // At most two connections per worker, not the driver's default of ten.

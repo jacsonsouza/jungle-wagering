@@ -272,10 +272,7 @@ describe('messaging layer (integration)', () => {
       await givenWallet('player-1', '100.00');
       await givenWallet('player-2', '100.00');
 
-      const [a, b] = await Promise.all([
-        buildPublisher(),
-        buildPublisher(),
-      ]);
+      const [a, b] = await Promise.all([buildPublisher(), buildPublisher()]);
 
       // Both drain concurrently. `SKIP LOCKED` is what keeps them from both
       // taking the same row; the totals below are what proves it worked.

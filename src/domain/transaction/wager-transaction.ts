@@ -415,8 +415,7 @@ export function wagerTransactionPayloadHash(
  * "b" produce different subsets and therefore different hashes.
  */
 function businessSubset(
-  props: Pick<CreateWagerTransactionProps, 'money'> &
-    Record<string, unknown>,
+  props: Pick<CreateWagerTransactionProps, 'money'> & Record<string, unknown>,
 ): Record<string, unknown> {
   const subset: Record<string, unknown> = {};
 

@@ -1,5 +1,8 @@
 import type { EntityManager } from '@mikro-orm/core';
-import type { DependencyHealth, HealthCheckPort } from '../ports/health.port.js';
+import type {
+  DependencyHealth,
+  HealthCheckPort,
+} from '../ports/health.port.js';
 
 /**
  * Readiness probe for PostgreSQL: a cheap `select 1` with the round-trip timed.

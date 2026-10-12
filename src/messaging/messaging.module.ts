@@ -161,9 +161,19 @@ import { WorkersLifecycle } from './workers-lifecycle.js';
           // on intermediate state; leaving the loops running would race it.
           env.nodeEnv !== 'test',
         ),
-      inject: [TransactionConsumer, OutboxPublisher, ReferenceWorker, PORTS.logger],
+      inject: [
+        TransactionConsumer,
+        OutboxPublisher,
+        ReferenceWorker,
+        PORTS.logger,
+      ],
     },
   ],
-  exports: [WorkersLifecycle, TransactionConsumer, OutboxPublisher, ReferenceWorker],
+  exports: [
+    WorkersLifecycle,
+    TransactionConsumer,
+    OutboxPublisher,
+    ReferenceWorker,
+  ],
 })
 export class MessagingModule {}

@@ -178,9 +178,11 @@ function readSqs(issues: string[]): SqsEnv {
   const endpoint = readRaw('SQS_ENDPOINT') ?? DEFAULT_SQS_ENDPOINT;
   const region = readRaw('SQS_REGION') ?? DEFAULT_SQS_REGION;
   const queueUrl =
-    readRaw('SQS_QUEUE_URL') ?? `${endpoint}/${LOCALSTACK_ACCOUNT}/wager-transactions.fifo`;
+    readRaw('SQS_QUEUE_URL') ??
+    `${endpoint}/${LOCALSTACK_ACCOUNT}/wager-transactions.fifo`;
   const dlqUrl =
-    readRaw('SQS_DLQ_URL') ?? `${endpoint}/${LOCALSTACK_ACCOUNT}/wager-transactions-dlq.fifo`;
+    readRaw('SQS_DLQ_URL') ??
+    `${endpoint}/${LOCALSTACK_ACCOUNT}/wager-transactions-dlq.fifo`;
 
   for (const [name, value] of [
     ['SQS_ENDPOINT', endpoint],

@@ -9,9 +9,7 @@ import { WagerTransactionEntity } from '../entities/wager-transaction.entity.js'
 import { WagerTransactionMapper } from '../mappers/wager-transaction.mapper.js';
 import { WalletEntity } from '../entities/wallet.entity.js';
 
-export class MikroOrmWagerTransactionRepository
-  implements WagerTransactionRepositoryPort
-{
+export class MikroOrmWagerTransactionRepository implements WagerTransactionRepositoryPort {
   async insert(
     tx: EntityManager,
     transaction: WagerTransaction,
@@ -149,9 +147,6 @@ export class MikroOrmWagerTransactionRepository
     // so a resolved transaction with a stale schedule would be retried forever.
     await tx
       .getRepository(WagerTransactionEntity)
-      .nativeUpdate(
-        { id: transactionId },
-        { pendingNextAttemptAt: null },
-      );
+      .nativeUpdate({ id: transactionId }, { pendingNextAttemptAt: null });
   }
 }

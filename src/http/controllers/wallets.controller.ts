@@ -78,8 +78,7 @@ export class WalletsController {
           name: 'InvalidCursorError',
           code: 'INVALID_CURSOR',
           category: 'VALIDATION',
-          message:
-            'cursor is not a value previously returned by this endpoint',
+          message: 'cursor is not a value previously returned by this endpoint',
           details: {},
         },
       });

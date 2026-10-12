@@ -69,16 +69,17 @@ export class WagerTransactionMapper {
       roundId: entity.roundId,
       gameId: entity.gameId,
       kind: entity.kind as WagerTransactionKind,
-      money: { amount: entity.amount, currency: entity.currency as CurrencyCode },
+      money: {
+        amount: entity.amount,
+        currency: entity.currency as CurrencyCode,
+      },
       referenceExternalTransactionId:
         entity.referenceExternalTransactionId ?? undefined,
       status: entity.status as WagerTransactionStatus,
       referenceTransactionId: entity.referenceTransactionId ?? undefined,
       // `rehydrate` validates this against the taxonomy, so the cast is the
       // same type-level bridge as `kind` and `status` above.
-      failureCode: (entity.failureCode ?? undefined) as
-        | FailureCode
-        | undefined,
+      failureCode: (entity.failureCode ?? undefined) as FailureCode | undefined,
       processedAt: entity.processedAt ?? undefined,
       resultBalance: resultBalanceOf(entity),
       createdAt: entity.createdAt,

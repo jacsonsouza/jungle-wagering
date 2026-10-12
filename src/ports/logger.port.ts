@@ -1,4 +1,6 @@
-export type LogFields = Readonly<Record<string, string | number | boolean | undefined>>;
+export type LogFields = Readonly<
+  Record<string, string | number | boolean | undefined>
+>;
 
 export interface LoggerPort {
   debug(message: string, fields?: LogFields): void;

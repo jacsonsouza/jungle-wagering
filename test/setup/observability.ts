@@ -1,5 +1,8 @@
 import type { LoggerPort, LogFields } from '../../src/ports/logger.port.js';
-import type { MetricLabels, MetricsPort } from '../../src/ports/metrics.port.js';
+import type {
+  MetricLabels,
+  MetricsPort,
+} from '../../src/ports/metrics.port.js';
 
 /**
  * Shared observability doubles.
@@ -44,9 +47,12 @@ export function recordingLogger(): LoggerPort & {
 
   return {
     lines,
-    debug: (message, fields) => void lines.push({ level: 'debug', message, fields }),
-    info: (message, fields) => void lines.push({ level: 'info', message, fields }),
-    warn: (message, fields) => void lines.push({ level: 'warn', message, fields }),
+    debug: (message, fields) =>
+      void lines.push({ level: 'debug', message, fields }),
+    info: (message, fields) =>
+      void lines.push({ level: 'info', message, fields }),
+    warn: (message, fields) =>
+      void lines.push({ level: 'warn', message, fields }),
     error: (message, fields) =>
       void lines.push({ level: 'error', message, fields }),
   };

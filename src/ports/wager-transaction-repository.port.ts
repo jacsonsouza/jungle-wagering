@@ -93,10 +93,7 @@ export interface WagerTransactionRepositoryPort {
    * Clears the worker's schedule once a deferred transaction finally resolves,
    * so the row stops matching `idx_wager_tx_pending_due`.
    */
-  clearPendingSchedule(
-    tx: EntityManager,
-    transactionId: string,
-  ): Promise<void>;
+  clearPendingSchedule(tx: EntityManager, transactionId: string): Promise<void>;
 }
 
 /** A PENDING_REFERENCE row that is due, with the worker's own bookkeeping. */

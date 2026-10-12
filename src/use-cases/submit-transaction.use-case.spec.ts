@@ -1,4 +1,7 @@
-import { DeadlockException, UniqueConstraintViolationException } from '@mikro-orm/core';
+import {
+  DeadlockException,
+  UniqueConstraintViolationException,
+} from '@mikro-orm/core';
 import type { EntityManager } from '@mikro-orm/core';
 import {
   CurrencyCode,
@@ -169,9 +172,7 @@ class FakeTxRepo implements WagerTransactionRepositoryPort {
     this.schedules.push({ transactionId, attempts, dueAt });
   }
 
-  async findDueForPendingReference(): Promise<
-    readonly PendingReferenceDue[]
-  > {
+  async findDueForPendingReference(): Promise<readonly PendingReferenceDue[]> {
     return [];
   }
 
@@ -846,7 +847,9 @@ describe('SubmitTransactionUseCase — observability (§12)', () => {
 
     const settled = await useCase.execute(command());
 
-    const line = logger.lines.find((entry) => entry.message === 'transaction settled');
+    const line = logger.lines.find(
+      (entry) => entry.message === 'transaction settled',
+    );
     expect(line?.fields).toMatchObject({
       transactionId: settled.transactionId,
       walletId: 'wallet-1',

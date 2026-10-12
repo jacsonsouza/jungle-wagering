@@ -97,7 +97,9 @@ export class MikroOrmOutboxRepository implements OutboxRepositoryPort {
         occurredAt: toDate(row.occurred_at),
         attempts: row.attempts,
         nextAttemptAt:
-          row.next_attempt_at === null ? undefined : toDate(row.next_attempt_at),
+          row.next_attempt_at === null
+            ? undefined
+            : toDate(row.next_attempt_at),
         publishedAt:
           row.published_at === null ? undefined : toDate(row.published_at),
       }),
@@ -121,7 +123,10 @@ export class MikroOrmOutboxRepository implements OutboxRepositoryPort {
     await em.nativeUpdate(
       OutboxMessageEntity,
       { id, publishedAt: null },
-      { attempts, nextAttemptAt: new Date(now.getTime() + backoffMs(attempts)) },
+      {
+        attempts,
+        nextAttemptAt: new Date(now.getTime() + backoffMs(attempts)),
+      },
     );
   }
 }

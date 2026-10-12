@@ -1,4 +1,8 @@
-import type { MoneyProps, WalletState, WagerTransactionState } from '../domain/index.js';
+import type {
+  MoneyProps,
+  WalletState,
+  WagerTransactionState,
+} from '../domain/index.js';
 import type { SubmitTransactionResult } from '../use-cases/submit-transaction.use-case.js';
 
 /**

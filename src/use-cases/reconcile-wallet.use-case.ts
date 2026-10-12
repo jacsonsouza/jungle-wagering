@@ -46,7 +46,8 @@ export class ReconcileWalletUseCase {
   ): Promise<ReconcileWalletResult> {
     const wallet = await this.wallets.findByIdForUpdate(tx, walletId);
 
-    if (!wallet) throw new WalletNotFoundError('wallet not found', { walletId });
+    if (!wallet)
+      throw new WalletNotFoundError('wallet not found', { walletId });
 
     const stored = wallet.balance;
 
@@ -56,8 +57,7 @@ export class ReconcileWalletUseCase {
     const calculated = Money.from({
       amount: creditTotal,
       currency: stored.currency,
-    })
-      .subtract(Money.from({ amount: debitTotal, currency: stored.currency }));
+    }).subtract(Money.from({ amount: debitTotal, currency: stored.currency }));
 
     const difference = calculated.subtract(stored);
     const consistent = difference.isZero();

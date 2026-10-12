@@ -1,8 +1,8 @@
-import { EntityManager } from "@mikro-orm/core";
-import { UnitOfWorkPort } from "../ports/unit-of-work.port.js";
-import { WalletRepositoryPort } from "../ports/wallet-repository.port.js";
-import { WalletNotFoundError, LedgerCursor } from "../domain/index.js";
-import { encodeCursor } from "../domain/ledger/ledger-cursor.js";
+import { EntityManager } from '@mikro-orm/core';
+import { UnitOfWorkPort } from '../ports/unit-of-work.port.js';
+import { WalletRepositoryPort } from '../ports/wallet-repository.port.js';
+import { WalletNotFoundError, LedgerCursor } from '../domain/index.js';
+import { encodeCursor } from '../domain/ledger/ledger-cursor.js';
 
 export const DEFAULT_LEDGER_PAGE_SIZE = 50;
 export const MAX_LEDGER_PAGE_SIZE = 100;
@@ -35,9 +35,14 @@ export class ListWalletLedgerUseCase {
   ) {}
 
   async execute(query: ListWalletLedgerQuery): Promise<ListWalletLedgerPage> {
-    const limit = Math.min(query.limit ?? DEFAULT_LEDGER_PAGE_SIZE, MAX_LEDGER_PAGE_SIZE);
+    const limit = Math.min(
+      query.limit ?? DEFAULT_LEDGER_PAGE_SIZE,
+      MAX_LEDGER_PAGE_SIZE,
+    );
 
-    return this.uow.read((tx) => this.run(tx, query.walletId, query.after, limit));
+    return this.uow.read((tx) =>
+      this.run(tx, query.walletId, query.after, limit),
+    );
   }
 
   private async run(
@@ -48,7 +53,8 @@ export class ListWalletLedgerUseCase {
   ): Promise<ListWalletLedgerPage> {
     const wallet = await this.wallets.findById(tx, walletId);
 
-    if (!wallet) throw new WalletNotFoundError('wallet not found', { walletId });
+    if (!wallet)
+      throw new WalletNotFoundError('wallet not found', { walletId });
 
     const rows = await this.wallets.listEntries(tx, walletId, {
       after,
@@ -74,9 +80,13 @@ export class ListWalletLedgerUseCase {
           createdAt: props.createdAt,
         };
       }),
-      nextCursor: hasMore && last
-        ? encodeCursor({ createdAt: last.props().createdAt, id: last.props().id })
-        : null,
+      nextCursor:
+        hasMore && last
+          ? encodeCursor({
+              createdAt: last.props().createdAt,
+              id: last.props().id,
+            })
+          : null,
     };
   }
 }

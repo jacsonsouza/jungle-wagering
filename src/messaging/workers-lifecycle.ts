@@ -1,5 +1,8 @@
 import type { LoggerPort } from '../ports/logger.port.js';
-import type { OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import type {
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
+} from '@nestjs/common';
 import { OutboxPublisher } from './outbox-publisher.js';
 import { ReferenceWorker } from './reference-worker.js';
 import { TransactionConsumer } from './transaction-consumer.js';
@@ -18,7 +21,9 @@ import { TransactionConsumer } from './transaction-consumer.js';
  * what §10 asks for when it says a shutdown must complete in-flight messages
  * or return them to visibility.
  */
-export class WorkersLifecycle implements OnApplicationBootstrap, OnApplicationShutdown {
+export class WorkersLifecycle
+  implements OnApplicationBootstrap, OnApplicationShutdown
+{
   constructor(
     private readonly consumer: TransactionConsumer,
     private readonly publisher: OutboxPublisher,
